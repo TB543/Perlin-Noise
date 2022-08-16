@@ -6,19 +6,17 @@ from numpy.linalg import norm as _norm
 class PerlinNoise:
     """
     a class for perlin noise with more useful features:
-
         --> multidimensional noise
-        --> ability to create more complex noise with octaves
+        --> ability to create more complex noise with octaves todo load octaves as octaves not PerlinNoise when loading saved obj
         --> ability to generate a "chunk" of noise (faster than getting individual values) todo
         --> ability to save and load PerlinNoise objects
-        --> ability to save PerlinNoise values to save processing power at the cost of ram/drive space todo add way to compress and reduce ram usage
+        --> ability to save PerlinNoise values to save processing power at the cost of ram/drive space
     """
 
-    def __init__(self, seed: float = None, octaves: list = None, scale: float = 255, minimum: float = -1,
-                 maximum: float = 1, save_data: bool = False, saved_perlin_obj: str = None):
+    def __init__(self, seed: float = None, octaves: list = None, scale: float = 255.0, minimum: float = -1.0,
+                 maximum: float = 1.0, save_data: bool = False, saved_perlin_obj: str = None):
         """
         creates a PerlinNoise object with attributes of the following parameters
-
         :param seed: the seed for the perlin noise, if not given a random seed will be generated
         :param octaves: a list of Octave objects that will be added to the noise value, note: modifying scale,
             minimum and maximum value will change the way the noise looks
@@ -51,12 +49,10 @@ class PerlinNoise:
     def get_value(self, *args: float, smooth: bool = False):
         """
         gets the value of the noise at the given coordinates
-
         :param args: the coordinates of the point in the noise, the number of args determines the dimensions of the
             noise
         :param smooth: determines if the perlin noise should be blended together more, downside is that it causes
             slightly more time to calculate the value, default is false
-
         :return: a float representing the value at that point
         """
 
@@ -114,55 +110,59 @@ class PerlinNoise:
 
             # saves value if applicable and returns value
             if self.save_data:
-                self.saved_data[args] = scaled_value
+                self.saved_data[tuple(args)] = scaled_value
             return scaled_value
 
     def generate_gradient(self, *args: int):
         """
         generates a single "grid of noise", note: the number of points generated is based on the scale of the noise
-
         :param args: the coordinates for the gradient note: this is different from point coordinates (floor(point
             coordinates / scale) = gradient coordinates). THE COORDINATES MUST BE INTEGERS
-
         :return: an array of noise values representing the gradient
         """
 
     def generate_chunk(self, start: tuple, end: tuple):
         """
         generates a chunk of perlin noise (faster than generating each point 1 by 1)
-
         :param start: the starting corner of the noise to be generated
         :param end: the ending corner of the noise to be generated
-
         :return: an array of point values
         """
 
     def save(self):
         """
         saves the perlin noise object and all of its attributes
-
         :return: json data representing all of the class attributes as a string
         """
 
-        return str({'seed': self.seed, 'octaves': [octave.save() for octave in self.octaves], 'scale': self.scale,
-                    'min': self.min, 'max': self.max, 'save data': self.save_data, 'saved data': self.saved_data})
+        return str(vars(self)).replace(', ', '\n').replace('{', '{\n').replace('}', '\n}')
 
     def load(self, data: str):
         """
         loads a previously saved PerlinNoise object with all of its previous attributes
-
         :param data: json data representing all of the class attributes as a string
         """
 
-        # loads all given data
-        data = eval(data)
-        self.seed = data['seed']
-        self.octaves = [PerlinNoise(saved_perlin_obj=octave) for octave in data['octaves']]
-        self.scale = data['scale']
-        self.min = data['min']
-        self.max = data['max']
-        self.save_data = data['save data']
-        self.saved_data = data['saved data']
+        # loads data
+        self.saved_data = {}
+        for line in data.split('\n'):
+            pair = line.split(': ')
+            if pair[0] == "'seed'":
+                self.seed = float(pair[1])
+            elif pair[0] == "'octaves'":
+                self.octaves = []  # todo
+            elif pair[0] == "'scale'":
+                self.scale = float(pair[1])
+            elif pair[0] == "'min'":
+                self.min = float(pair[1])
+            elif pair[0] == "'max'":
+                self.max = float(pair[1])
+            elif pair[0] == "'save_data'":
+                self.save_data = bool(pair[1])
+            elif pair[0] == "'saved_data'":
+                pass
+            elif len(pair) == 2:
+                self.saved_data[eval(pair[0])] = float(pair[1])
 
 
 class Octave(PerlinNoise):
@@ -174,7 +174,6 @@ class Octave(PerlinNoise):
     def __init__(self, seed: float = None, scale: float = 255, minimum: float = -1, maximum: float = 1):
         """
         a modified init method of octaves limiting the number of options
-
         :param seed: the seed for the noise
         :param scale: the scale of the noise
         :param minimum: the minimum value of the noise
@@ -183,3 +182,11 @@ class Octave(PerlinNoise):
         """
 
         super().__init__(seed, scale=scale, minimum=minimum, maximum=maximum)
+
+    def __repr__(self):
+        """
+        returns the data of the octave instead of the location in memory
+        :return: the json data of the octave represented as a string
+        """
+
+        return str({'seed': self.seed, 'scale': self.scale, 'min': self.min, 'max': self.max})
